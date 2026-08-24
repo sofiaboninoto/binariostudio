@@ -1,9 +1,7 @@
-const CACHE_NAME = 'binario-cache-v2';
+const CACHE_NAME = 'binario-cache-v3';
 const ASSETS = [
   './index.html',
   './manifest.json',
-  './icon-192.png',
-  './icon-512.png',
   './image.png'
 ];
 
@@ -42,8 +40,8 @@ self.addEventListener('message', (event) => {
         body,
         tag,
         renotify: true,
-        icon: './icon-192.png',
-        badge: './icon-192.png',
+        icon: './image.png',
+        badge: './image.png',
         data: { url: './index.html' }
       })
     );
