@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Binario — Il mio percorso verso il prossimo lavoro</title>
+<title>Binario Studio — Il mio percorso verso il prossimo lavoro</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#e05b5b">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Binario">
+<meta name="apple-mobile-web-app-title" content="Binario studio">
 <style>
 :root{
   --bg:#f5f6f8;--card:#fff;--text:#1d2433;--muted:#707887;--line:#e3e6eb;
@@ -95,8 +95,6 @@ h1{font-size:30px;margin:0 0 4px}.subtitle{color:var(--muted)}
 .notif-foot{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;flex-wrap:wrap;margin-top:16px}
 .toggle-stack{display:flex;flex-direction:column;gap:10px}.toggle-line{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
 .toggle-line input{width:18px;height:18px;accent-color:var(--accent)}
-.repeat-box{margin-top:16px;padding:14px;border-radius:14px;background:#fafbfc;border:1px solid var(--line)}
-.repeat-box strong{display:block;margin-bottom:4px}
 @media(max-width:900px){
  .app{padding:14px}header{flex-direction:column;margin-bottom:14px}h1{font-size:26px}.today{white-space:normal}
  .grid{grid-template-columns:1fr}.calendar-card{grid-column:1;grid-row:1}.progress-card{grid-column:1;grid-row:2}.tasks-card{grid-column:1;grid-row:4}.stats-card{grid-column:1;grid-row:5}
@@ -235,14 +233,6 @@ h1{font-size:30px;margin:0 0 4px}.subtitle{color:var(--muted)}
     </label>
   </div>
   <div class="days-table" id="daysTable"></div>
-  <div class="repeat-box">
-    <strong>Promemoria insistente</strong>
-    <label class="toggle-line">
-      <input type="checkbox" id="repeatHourly">
-      Rimanda la notifica ogni ora se non viene registrata nessuna task
-    </label>
-    <div class="helper">Dopo la prima notifica, Binario prova a ricordartelo ogni 60 minuti. Appena registri una qualsiasi attività quel giorno, i reminder si fermano.</div>
-  </div>
   <div class="notif-foot">
     <div class="toggle-stack">
       <label class="toggle-line"><input type="checkbox" id="skipIfLogged">Salta la prima notifica se ho già registrato una sessione oggi</label>
@@ -252,7 +242,7 @@ h1{font-size:30px;margin:0 0 4px}.subtitle{color:var(--muted)}
       <button class="primary" onclick="saveNotifSettings()">Salva impostazioni</button>
     </div>
   </div>
-  <div class="helper">Nota PWA: senza un server push, Android/iOS non garantiscono l'esecuzione esatta ogni ora quando l'app è completamente terminata dal sistema. Il controllo funziona mentre l'app è aperta, quando rimane eseguibile in background e appena viene riaperta.</div>
+  <div class="helper">La notifica viene inviata una sola volta nel giorno, all’orario configurato. Se apri l’app dopo quell’orario, il controllo viene eseguito subito.</div>
 </section>
 </div>
 </div>
@@ -386,39 +376,84 @@ function deleteSession(id){const s=data.sessions.find(x=>x.id===id);if(!s||!conf
 
 /* Notifiche */
 const DAY_NAMES=['Lunedì','Martedì','Mercoledì','Giovedì','Venerdì','Sabato','Domenica'];
-function defaultNotifSettings(){return{morningTime:'10:00',afternoonTime:'15:00',defaultChoice:'mattina',perDay:[null,null,null,null,null,null,null],skipIfLogged:true,repeatHourly:false,lastNotified:{},lastReminderAt:{}}}
-function loadNotifSettings(){try{const raw=JSON.parse(localStorage.getItem('binarioNotif')||'null');const n={...defaultNotifSettings(),...(raw||{})};if(!n.lastReminderAt)n.lastReminderAt={};if(!n.lastNotified)n.lastNotified={};return n}catch(e){return defaultNotifSettings()}}
+function defaultNotifSettings(){return{morningTime:'10:00',afternoonTime:'15:00',defaultChoice:'mattina',perDay:[null,null,null,null,null,null,null],skipIfLogged:true,lastNotified:{}}}
+function loadNotifSettings(){try{const raw=JSON.parse(localStorage.getItem('binarioNotif')||'null');const n={...defaultNotifSettings(),...(raw||{})};if(!n.lastNotified)n.lastNotified={};return n}catch(e){return defaultNotifSettings()}}
 let notifSettings=loadNotifSettings();
+delete notifSettings.repeatHourly;
+delete notifSettings.lastReminderAt;
 function persistNotifSettings(){localStorage.setItem('binarioNotif',JSON.stringify(notifSettings))}
 function renderNotifStatus(){const el=document.getElementById('notifStatus'),supported='Notification'in window,perm=supported?Notification.permission:'unsupported',btn=document.getElementById('enableNotifBtn');if(!supported){el.className='notif-status off';el.textContent='Il browser non supporta le notifiche.';btn.style.display='none';return}
  if(perm==='granted'){el.className='notif-status on';el.textContent='Notifiche attive su questo dispositivo.';btn.style.display='none'}else if(perm==='denied'){el.className='notif-status off';el.textContent='Notifiche bloccate dal telefono/browser. Riattivale dalle impostazioni del sito.';btn.style.display='none'}else{el.className='notif-status off';el.textContent='Notifiche non ancora attivate.';btn.style.display='inline-block'}}
-function renderDaysTable(){document.getElementById('morningTime').value=notifSettings.morningTime;document.getElementById('afternoonTime').value=notifSettings.afternoonTime;document.getElementById('defaultChoice').value=notifSettings.defaultChoice;document.getElementById('skipIfLogged').checked=!!notifSettings.skipIfLogged;document.getElementById('repeatHourly').checked=!!notifSettings.repeatHourly;
+function renderDaysTable(){document.getElementById('morningTime').value=notifSettings.morningTime;document.getElementById('afternoonTime').value=notifSettings.afternoonTime;document.getElementById('defaultChoice').value=notifSettings.defaultChoice;document.getElementById('skipIfLogged').checked=!!notifSettings.skipIfLogged;
  document.getElementById('daysTable').innerHTML=DAY_NAMES.map((name,i)=>{const val=notifSettings.perDay[i]||'';return`<div class="day-row"><div class="day-name">${name}</div><select onchange="setDayChoice(${i},this.value)"><option value="" ${val===''?'selected':''}>Predefinito (${notifSettings.defaultChoice})</option><option value="mattina" ${val==='mattina'?'selected':''}>Mattina (${notifSettings.morningTime})</option><option value="pomeriggio" ${val==='pomeriggio'?'selected':''}>Pomeriggio (${notifSettings.afternoonTime})</option><option value="nessuna" ${val==='nessuna'?'selected':''}>Nessuna notifica</option></select></div>`}).join('')}
 function setDayChoice(i,v){notifSettings.perDay[i]=v===''?null:v}
-function saveNotifSettings(){notifSettings.morningTime=document.getElementById('morningTime').value||'10:00';notifSettings.afternoonTime=document.getElementById('afternoonTime').value||'15:00';notifSettings.defaultChoice=document.getElementById('defaultChoice').value;notifSettings.skipIfLogged=document.getElementById('skipIfLogged').checked;notifSettings.repeatHourly=document.getElementById('repeatHourly').checked;persistNotifSettings();renderDaysTable();checkAndFireNotifications()}
+function saveNotifSettings(){notifSettings.morningTime=document.getElementById('morningTime').value||'10:00';notifSettings.afternoonTime=document.getElementById('afternoonTime').value||'15:00';notifSettings.defaultChoice=document.getElementById('defaultChoice').value;notifSettings.skipIfLogged=document.getElementById('skipIfLogged').checked;persistNotifSettings();renderDaysTable();checkAndFireNotifications()}
 function enableNotifications(){if(!('Notification'in window)){renderNotifStatus();return}Notification.requestPermission().then(()=>{renderNotifStatus();checkAndFireNotifications()})}
 function todaySlotChoice(){const now=new Date(),dayIndex=(now.getDay()+6)%7;let choice=notifSettings.perDay[dayIndex];if(!choice)choice=notifSettings.defaultChoice;return{dayIndex,choice}}
 function alreadyLoggedToday(){const today=fmtDate(new Date());return data.sessions.some(s=>s.date===today)}
 function timeReached(str,now){const[h,m]=str.split(':').map(Number);return now.getHours()>h||(now.getHours()===h&&now.getMinutes()>=m)}
 function targetDateTime(timeStr){const[h,m]=timeStr.split(':').map(Number),d=new Date();d.setHours(h,m,0,0);return d}
-function showNotification(slot,isRepeat=false){const title=isRepeat?'Binario — Promemoria':'Binario — Ora di studiare';const body=isRepeat?'Non hai ancora registrato attività oggi. Anche 15 minuti contano.':slot==='mattina'?'È il tuo momento di studio del mattino. Anche 15 minuti contano.':'È il tuo momento di studio del pomeriggio. Scegli una task piccola e parti.';const tag=`binario-${fmtDate(new Date())}-${slot}-${isRepeat?'repeat':'first'}`;
- navigator.serviceWorker?.getRegistration().then(reg=>{if(reg&&reg.active)reg.active.postMessage({type:'SHOW_NOTIFICATION',payload:{title,body,tag}});else if('Notification'in window)new Notification(title,{body,tag,icon:'icon-192.png'})}).catch(()=>{if('Notification'in window)new Notification(title,{body,tag,icon:'icon-192.png'})})}
-function pruneNotifHistory(){for(const bag of [notifSettings.lastNotified,notifSettings.lastReminderAt]){const keys=Object.keys(bag).sort();while(keys.length>14)delete bag[keys.shift()]}}
-function checkAndFireNotifications(){
- if(!('Notification'in window)||Notification.permission!=='granted')return;
- const now=new Date(),today=fmtDate(now),{choice}=todaySlotChoice();if(choice==='nessuna')return;
- const targetTime=choice==='mattina'?notifSettings.morningTime:notifSettings.afternoonTime;if(!timeReached(targetTime,now))return;
- const logged=alreadyLoggedToday(),firstAlready=(notifSettings.lastNotified[today]||[]).includes(choice);
- if(!firstAlready){
-  if(!(notifSettings.skipIfLogged&&logged)){showNotification(choice,false)}
-  if(!notifSettings.lastNotified[today])notifSettings.lastNotified[today]=[];
-  notifSettings.lastNotified[today].push(choice);notifSettings.lastReminderAt[today]=now.getTime();pruneNotifHistory();persistNotifSettings();return;
+function showNotification(slot){
+ const title='Binario — Ora di studiare';
+ const body=slot==='mattina'
+   ?'È il tuo momento di studio del mattino. Anche 15 minuti contano.'
+   :'È il tuo momento di studio del pomeriggio. Scegli una task piccola e parti.';
+ const tag=`binario-${fmtDate(new Date())}-${slot}`;
+
+ if('serviceWorker' in navigator){
+   navigator.serviceWorker.ready.then(reg=>{
+     return reg.showNotification(title,{
+       body,
+       tag,
+       icon:'image.png',
+       badge:'image.png',
+       data:{url:'./index.html'}
+     });
+   }).catch(()=>{
+     if('Notification' in window) new Notification(title,{body,tag,icon:'image.png'});
+   });
+ }else if('Notification' in window){
+   new Notification(title,{body,tag,icon:'image.png'});
  }
- if(!notifSettings.repeatHourly||logged)return;
- const last=Number(notifSettings.lastReminderAt[today]||targetDateTime(targetTime).getTime());
- if(now.getTime()-last>=60*60*1000){showNotification(choice,true);notifSettings.lastReminderAt[today]=now.getTime();pruneNotifHistory();persistNotifSettings()}
 }
-function registerServiceWorker(){if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{})}
+function pruneNotifHistory(){
+ const keys=Object.keys(notifSettings.lastNotified).sort();
+ while(keys.length>14)delete notifSettings.lastNotified[keys.shift()];
+}
+function checkAndFireNotifications(){
+ if(!('Notification' in window) || Notification.permission!=='granted')return;
+
+ const now=new Date();
+ const today=fmtDate(now);
+ const {choice}=todaySlotChoice();
+ if(choice==='nessuna')return;
+
+ const targetTime=choice==='mattina'
+   ?notifSettings.morningTime
+   :notifSettings.afternoonTime;
+
+ if(!timeReached(targetTime,now))return;
+
+ const already=(notifSettings.lastNotified[today]||[]).includes(choice);
+ if(already)return;
+
+ const logged=alreadyLoggedToday();
+ if(notifSettings.skipIfLogged && logged){
+   if(!notifSettings.lastNotified[today])notifSettings.lastNotified[today]=[];
+   notifSettings.lastNotified[today].push(choice);
+   pruneNotifHistory();
+   persistNotifSettings();
+   return;
+ }
+
+ showNotification(choice);
+
+ if(!notifSettings.lastNotified[today])notifSettings.lastNotified[today]=[];
+ notifSettings.lastNotified[today].push(choice);
+ pruneNotifHistory();
+ persistNotifSettings();
+}
+function registerServiceWorker(){if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=3').catch(()=>{})}
 
 renderNotifStatus();renderDaysTable();registerServiceWorker();checkAndFireNotifications();
 setInterval(checkAndFireNotifications,60000);
