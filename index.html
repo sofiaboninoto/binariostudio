@@ -405,15 +405,15 @@ function showNotification(slot){
      return reg.showNotification(title,{
        body,
        tag,
-       icon:'image.png',
-       badge:'image.png',
+       icon:'icon-192.png',
+       badge:'icon-192.png',
        data:{url:'./index.html'}
      });
    }).catch(()=>{
-     if('Notification' in window) new Notification(title,{body,tag,icon:'image.png'});
+     if('Notification' in window) new Notification(title,{body,tag,icon:'icon-192.png'});
    });
  }else if('Notification' in window){
-   new Notification(title,{body,tag,icon:'image.png'});
+   new Notification(title,{body,tag,icon:'icon-192.png'});
  }
 }
 function pruneNotifHistory(){
@@ -453,7 +453,7 @@ function checkAndFireNotifications(){
  pruneNotifHistory();
  persistNotifSettings();
 }
-function registerServiceWorker(){if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=3').catch(()=>{})}
+function registerServiceWorker(){if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=4').catch(()=>{})}
 
 renderNotifStatus();renderDaysTable();registerServiceWorker();checkAndFireNotifications();
 setInterval(checkAndFireNotifications,60000);
