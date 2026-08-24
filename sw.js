@@ -1,15 +1,14 @@
-const CACHE_NAME = 'binario-cache-v1';
+const CACHE_NAME = 'binario-cache-v2';
 const ASSETS = [
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './image.png'
 ];
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS))
-  );
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(ASSETS)));
   self.skipWaiting();
 });
 
@@ -23,31 +22,43 @@ self.addEventListener('activate', (event) => {
 });
 
 self.addEventListener('fetch', (event) => {
+  if (event.request.method !== 'GET') return;
   event.respondWith(
-    caches.match(event.request).then((cached) => cached || fetch(event.request))
+    fetch(event.request)
+      .then((response) => {
+        const copy = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});
+        return response;
+      })
+      .catch(() => caches.match(event.request))
   );
 });
 
-// Riceve dalla pagina la richiesta di mostrare una notifica locale
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
     const { title, body, tag } = event.data.payload;
-    self.registration.showNotification(title, {
-      body,
-      tag,
-      icon: './icon-192.png',
-      badge: './icon-192.png'
-    });
+    event.waitUntil(
+      self.registration.showNotification(title, {
+        body,
+        tag,
+        renotify: true,
+        icon: './icon-192.png',
+        badge: './icon-192.png',
+        data: { url: './index.html' }
+      })
+    );
   }
 });
 
-// Al tap sulla notifica, riporta l'utente all'app
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   event.waitUntil(
-    self.clients.matchAll({ type: 'window' }).then((clients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
-        if ('focus' in client) return client.focus();
+        if ('focus' in client) {
+          client.navigate?.('./index.html');
+          return client.focus();
+        }
       }
       if (self.clients.openWindow) return self.clients.openWindow('./index.html');
     })
