@@ -1,7 +1,7 @@
 {
-  "name": "Binario",
-  "short_name": "Binario",
-  "description": "Diario di progresso verso Analisi funzionale e percorso Alstom / Ferrovia.",
+  "name": "Binario Studio",
+  "short_name": "Binario Studio",
+  "description": "Diario di progresso.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
